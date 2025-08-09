@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Studyholic — Study Hall</title>
+<style>
+  :root{
+    --bg1:#f7f3ff; --bg2:#e7f7ff; --card:#ffffff;
+    --accent:#9b8cff; --accent2:#6fc3ff; --muted:#6b7280;
+    --glass: rgba(255,255,255,0.75);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2));
+    color:#111; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    padding:18px;
+  }
+
+  .wrap{max-width:1100px; margin:0 auto;}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#ffd1f0);display:flex;align-items:center;justify-content:center;font-size:22px;color:white;font-weight:700}
+  h1{font-size:20px;margin:0}
+  .quote{background:var(--glass);backdrop-filter:blur(6px);padding:10px 14px;border-radius:10px;box-shadow:0 6px 18px rgba(15,23,42,0.06);font-style:italic;color:var(--muted)}
+
+  main{display:grid;grid-template-columns:1fr 360px;gap:18px}
+  @media (max-width:980px){ main{grid-template-columns:1fr} }
+
+  /* Cards */
+  .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 8px 30px rgba(16,24,40,0.06)}
+  .section-title{font-weight:700;margin:0 0 10px 0;color:#0f172a;font-size:15px}
+
+  /* Layout inside primary column */
+  .left-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:980px){ .left-grid{grid-template-columns:1fr} }
+
+  /* Timer */
+  .timer-display{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;font-size:28px;text-align:center;padding:10px;border-radius:8px;background:linear-gradient(90deg,var(--accent) 0%, var(--accent2) 100%);color:white}
+  .inputs{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:8px}
+  .inputs input{width:66px;padding:8px;border-radius:8px;border:1px solid #e6e9ef;text-align:center;font-size:14px}
+
+  .btn{padding:8px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
+  .btn:disabled{opacity:0.5;cursor:not-allowed}
+  .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:white}
+  .btn-ghost{background:#f3f4f6;color:#111;border:1px solid #e6e9ef}
+
+  /* Tasks */
+  .task-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;padding-right:6px}
+  .task-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:#fbfdff;border:1px solid #eef2ff}
+  .task-item .text{flex:1}
+  .task-item.completed .text{text-decoration:line-through;color:#94a3b8}
+
+  /* Notes */
+  textarea{width:100%;min-height:140px;padding:10px;border-radius:10px;border:1px solid #e6e9ef;font-size:14px;resize:vertical}
+  .notes-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+
+  /* Flashcards */
+  .flash-controls{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .flash-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+  .flip-card{perspective:1000px;cursor:pointer}
+  .flip-card-inner{position:relative;width:100%;height:140px;transition:transform .6s;transform-style:preserve-3d}
+  .flip-card.flipped .flip-card-inner{transform:rotateY(180deg)}
+  .flip-front,.flip-back{position:absolute;inset:0;border-radius:10px;padding:12px;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;text-align:center}
+  .flip-front{background:linear-gradient(180deg,#fff,#f8fafc);border:1px solid #eef2ff;color:#0f172a}
+  .flip-back{background:linear-gradient(180deg,#ecfdf5,#bbf7d0);transform:rotateY(180deg);border:1px solid #d1fae5}
+
+  /* Calendar simple */
+  .calendar-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .calendar-row input[type="date"]{padding:8px;border-radius:8px;border:1px solid #e6e9ef}
+
+  /* Productivity */
+  .prod-grid{display:flex;gap:10px;flex-wrap:wrap}
+  .prod-card{flex:1;min-width:140px;padding:12px;border-radius:10px;background:linear-gradient(90deg,#fff,#fafafa);border:1px solid #eef2ff;text-align:center}
+  .stat{font-weight:800;font-size:18px;color:#0f172a}
+
+  footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">SH</div>
+      <div>
+        <h1>Studyholic</h1>
+        <div style="font-size:12px;color:var(--muted)">Your study hall — focus, plan & track</div>
+      </div>
+    </div>
+    <div class="quote card" id="quoteBox">"Small steps every day lead to big results"</div>
+  </header>
+
+  <main>
+    <!-- left area -->
+    <section>
+      <div class="card" style="margin-bottom:12px">
+        <div class="section-title">⏱️ Timer</div>
+        <div id="timerDisplay" class="timer-display">00:25:00</div>
+        <div class="inputs" style="margin-top:10px">
+          <input id="hoursInput" type="number" min="0" placeholder="H" value="0"/>
+          <input id="minutesInput" type="number" min="0" max="59" placeholder="M" value="25"/>
+          <input id="secondsInput" type="number" min="0" max="59" placeholder="S" value="0"/>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+          <button id="startBtn" class="btn btn-primary">Start</button>
+          <button id="pauseBtn" class="btn btn-ghost">Pause</button>
+          <button id="resetBtn" class="btn btn-ghost">Reset</button>
+        </div>
+        <div style="margin-top:10px;color:var(--muted);font-size:13px;text-align:center">
+          Running timer adds to today's productive time automatically.
+        </div>
+      </div>
+
+      <div class="left-grid">
+        <div class="card">
+          <div class="section-title">✅ Tasks</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <input id="taskInput" class="input" type="text" placeholder="New task..."/>
+            <button id="addTaskBtn" class="btn btn-primary">Add</button>
+          </div>
+          <div class="task-list" id="taskList"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">📝 Notes</div>
+          <textarea id="notesArea" placeholder="Type your notes..."></textarea>
+          <div class="notes-row">
+            <button id="saveNotesBtn" class="btn btn-primary">Save</button>
+            <button id="clearNotesBtn" class="btn btn-ghost">Clear</button>
+            <div style="flex:1;text-align:right;color:var(--muted);font-size:13px" id="notesStatus"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="section-title">📚 Flashcards</div>
+        <div class="flash-controls">
+          <input id="flashQ" type="text" placeholder="Question" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6e9ef"/>
+          <input id="flashA" type="text" placeholder="Answer" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6e9ef"/>
+          <button id="addFlashBtn" class="btn btn-primary">Add</button>
+        </div>
+        <div class="flash-list" id="flashList"></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="section-title">📅 Calendar (pick date & add tasks)</div>
+        <div class="calendar-row">
+          <input id="calDate" type="date"/>
+          <input id="calTaskInput" type="text" placeholder="Task for selected date" style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6e9ef"/>
+          <button id="addCalTaskBtn" class="btn btn-primary">Add</button>
+        </div>
+        <div style="margin-top:10px">
+          <strong>Tasks for <span id="selectedDateLabel">—</span></strong>
+          <div id="calTasksList" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- right sidebar -->
+    <aside>
+      <div class="card" style="margin-bottom:12px">
+        <div class="section-title">📊 Productivity</div>
+        <div class="prod-grid" style="margin-top:8px">
+          <div class="prod-card">
+            <div style="color:var(--muted);font-size:12px">Today study time</div>
+            <div class="stat" id="studyTimeStat">0m</div>
+          </div>
+          <div class="prod-card">
+            <div style="color:var(--muted);font-size:12px">Tasks completed (today)</div>
+            <div class="stat" id="tasksDoneStat">0</div>
+          </div>
+          <div class="prod-card">
+            <div style="color:var(--muted);font-size:12px">Flashcards reviewed</div>
+            <div class="stat" id="flashReviewedStat">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:12px">
+        <div class="section-title">💡 Quick AI (offline canned tips)</div>
+        <div id="aiTips" style="font-size:14px;color:var(--muted)">
+          Ask about focus, motivation, or study techniques (type & press Enter).
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <input id="aiInput" type="text" placeholder="Ask (e.g., focus)..." style="flex:1;padding:8px;border-radius:8px;border:1px solid #e6e9ef"/>
+          <button id="aiAskBtn" class="btn btn-primary">Ask</button>
+        </div>
+        <div id="aiAnswer" style="margin-top:8px;color:#0f172a;font-weight:600"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">About</div>
+        <div style="font-size:13px;color:var(--muted)">Studyholic — focus timer, notes, flashcards, task manager & calendar. Works offline via localStorage.</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>Made with ☕ & focus — Studyholic</footer>
+</div>
+
+<script>
+/* -------------------------
+   Storage helpers & utils
+   ------------------------- */
+const store = {
+  get(key, def=null){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def;}catch(e){return def} },
+  set(key,val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} },
+  remove(key){ try{ localStorage.removeItem(key); }catch(e){} }
+};
+function formatTime(totalSec){
+  const h=Math.floor(totalSec/3600), m=Math.floor((totalSec%3600)/60), s=totalSec%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function todayKey(){ const d=new Date(); return d.toISOString().slice(0,10); }
+
+/* -------------------------
+   Motivational quotes
+   ------------------------- */
+const quotes = [
+  "Small steps every day lead to big results",
+  "Focus on progress, not perfection",
+  "Your future self will thank you for studying today",
+  "Consistency is key",
+  "Every expert began as a beginner",
+  "Take one small step every day"
+];
+const quoteBox = document.getElementById('quoteBox');
+(function setRandomQuote(){ quoteBox.textContent = `"${quotes[Math.floor(Math.random()*quotes.length)]}"`; })();
+
+/* -------------------------
+   App state (persisted)
+   ------------------------- */
+let state = {
+  timerSeconds: 25*60, isRunning:false, timerIntervalId:null,
+  totalStudyByDay: store.get('studyholic_totalStudyByDay',{}), // { '2025-08-09': seconds, ... }
+  tasks: store.get('studyholic_tasks', []),
+  notes: store.get('studyholic_notes',''),
+  flashcards: store.get('studyholic_flashcards', []),
+  flashReviewedByDay: store.get('studyholic_flashReviewedByDay',{}), // {date: count}
+  calendar: store.get('studyholic_calendar', {}) // { '2025-08-09': [ {id,text,done} ] }
+};
+
+/* -------------------------
+   Timer implementation (real-time exact user-set)
+   ------------------------- */
+const timerDisplay = document.getElementById('timerDisplay');
+const hoursInput = document.getElementById('hoursInput');
+const minutesInput = document.getElementById('minutesInput');
+const secondsInput = document.getElementById('secondsInput');
+const startBtn = document.getElementById('startBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+function loadTimerFromInputs(){
+  const h = Math.max(0, parseInt(hoursInput.value)||0);
+  const m = Math.max(0, parseInt(minutesInput.value)||0);
+  const s = Math.max(0, parseInt(secondsInput.value)||0);
+  return h*3600 + m*60 + s;
+}
+function setTimerVisual(sec){
+  timerDisplay.textContent = formatTime(sec);
+}
+function saveStudyData(){
+  store.set('studyholic_totalStudyByDay', state.totalStudyByDay);
+  store.set('studyholic_flashReviewedByDay', state.flashReviewedByDay);
+}
+function startTimer(){
+  if(state.isRunning) return;
+  // If timerSeconds is zero, (user hasn't set), take inputs
+  if(state.timerSeconds <= 0){
+    const newSec = loadTimerFromInputs();
+    if(newSec <= 0){ alert('Please set a time > 0'); return; }
+    state.timerSeconds = newSec;
+  }
+  state.isRunning = true;
+  startBtn.disabled = true;
+  hoursInput.disabled = true; minutesInput.disabled = true; secondsInput.disabled = true;
+  // Start ticking once per second
+  state.timerIntervalId = setInterval(()=>{
+    if(state.timerSeconds <= 0){ stopTimerAndAlert(); return; }
+    state.timerSeconds--;
+    // Add to today's study total (counts each second)
+    const key = todayKey();
+    state.totalStudyByDay[key] = (state.totalStudyByDay[key]||0) + 1;
+    saveStudyData();
+    setTimerVisual(state.timerSeconds);
+    updateProductivityUI();
+  }, 1000);
+}
+function pauseTimer(){
+  if(!state.isRunning) return;
+  clearInterval(state.timerIntervalId);
+  state.timerIntervalId = null;
+  state.isRunning=false;
+  startBtn.disabled = false;
+  hoursInput.disabled = false; minutesInput.disabled = false; secondsInput.disabled = false;
+}
+function resetTimer(){
+  pauseTimer();
+  // reset to inputs (or default 25min)
+  const newSec = loadTimerFromInputs();
+  state.timerSeconds = (newSec>0)? newSec : 25*60;
+  setTimerVisual(state.timerSeconds);
+}
+function stopTimerAndAlert(){
+  pauseTimer();
+  alert("⏰ Time's up! Great work.");
+  // reset visual to 00:00:00
+  setTimerVisual(0);
+}
+
+/* -------------------------
+   Tasks CRUD
+   ------------------------- */
+const taskListEl = document.getElementById('taskList');
+const taskInput = document.getElementById('taskInput');
+const addTaskBtn = document.getElementById('addTaskBtn');
+
+function saveTasks(){ store.set('studyholic_tasks', state.tasks); }
+function renderTasks(){
+  taskListEl.innerHTML = '';
+  if(state.tasks.length===0){ taskListEl.innerHTML = '<div style="color:var(--muted);padding:12px;text-align:center">No tasks yet</div>'; return; }
+  state.tasks.forEach(t=>{
+    const div = document.createElement('div');
+    div.className = 'task-item' + (t.completed? ' completed':'');
+    div.innerHTML = `
+      <div style="width:22px; height:22px; border-radius:6px; background:${t.completed? '#34d399':'#eef2ff'}; display:flex;align-items:center;justify-content:center;cursor:pointer">${t.completed? '✓':''}</div>
+      <div class="text">${escapeHtml(t.text)}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" data-id="${t.id}" data-action="toggle">Toggle</button>
+        <button class="btn btn-ghost" data-id="${t.id}" data-action="delete">Del</button>
+      </div>`;
+    taskListEl.appendChild(div);
+  });
+}
+function addTask(){
+  const text = (taskInput.value||'').trim();
+  if(!text) return;
+  const item = { id: Date.now(), text, completed:false, createdAt:new Date().toISOString() };
+  state.tasks.unshift(item);
+  taskInput.value='';
+  saveTasks(); renderTasks(); updateProductivityUI();
+}
+taskListEl.addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('button');
+  if(!btn) return;
+  const id = Number(btn.dataset.id);
+  const action = btn.dataset.action;
+  if(action==='toggle'){ state.tasks = state.tasks.map(t=> t.id===id? {...t, completed:!t.completed}: t ); saveTasks(); renderTasks(); updateProductivityUI(); }
+  if(action==='delete'){ state.tasks = state.tasks.filter(t=> t.id!==id); saveTasks(); renderTasks(); updateProductivityUI(); }
+});
+addTaskBtn.addEventListener('click', addTask);
+taskInput.addEventListener('keypress', e=>{ if(e.key==='Enter') addTask(); });
+
+/* -------------------------
+   Notes
+   ------------------------- */
+const notesArea = document.getElementById('notesArea');
+const saveNotesBtn = document.getElementById('saveNotesBtn');
+const clearNotesBtn = document.getElementById('clearNotesBtn');
+const notesStatus = document.getElementById('notesStatus');
+
+function loadNotes(){ notesArea.value = state.notes || ''; updateNotesStatus(); }
+function updateNotesStatus(){ notesStatus.textContent = `${(notesArea.value||'').trim().split(/\s+/).filter(Boolean).length} words`; }
+saveNotesBtn.addEventListener('click', ()=>{
+  state.notes = notesArea.value;
+  store.set('studyholic_notes', state.notes);
+  updateNotesStatus();
+  alert('Notes saved locally on this device.');
+});
+clearNotesBtn.addEventListener('click', ()=>{
+  if(!confirm('Clear notes?')) return;
+  notesArea.value=''; state.notes=''; store.set('studyholic_notes',''); updateNotesStatus();
+});
+notesArea.addEventListener('input', updateNotesStatus);
+
+/* -------------------------
+   Flashcards
+   ------------------------- */
+const flashList = document.getElementById('flashList');
+const addFlashBtn = document.getElementById('addFlashBtn');
+const flashQ = document.getElementById('flashQ'), flashA = document.getElementById('flashA');
+
+function saveFlashcards(){ store.set('studyholic_flashcards', state.flashcards); }
+function renderFlashcards(){
+  flashList.innerHTML='';
+  if(state.flashcards.length===0){ flashList.innerHTML='<div style="color:var(--muted)">No flashcards yet</div>'; return; }
+  state.flashcards.forEach((f,idx)=>{
+    const wrap = document.createElement('div');
+    wrap.className='flip-card';
+    wrap.dataset.id=f.id;
+    wrap.innerHTML = `<div class="flip-card-inner">
+        <div class="flip-front">${escapeHtml(f.question)}</div>
+        <div class="flip-back">${escapeHtml(f.answer)}</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn-ghost" data-action="flip">Flip</button>
+        <button class="btn btn-ghost" data-action="del">Delete</button>
+      </div>`;
+    // attach listeners
+    wrap.querySelector('.flip-front').parentElement.parentElement; // noop
+    flashList.appendChild(wrap);
+    // click to flip
+    wrap.addEventListener('click', (ev)=>{
+      // ignore clicks on control buttons (they have their own handlers)
+      if(ev.target.tagName.toLowerCase()==='button') return;
+      toggleCardFlip(wrap);
+    });
+  });
+}
+function toggleCardFlip(wrapEl){
+  const id = Number(wrapEl.dataset.id);
+  const innerWrap = wrapEl;
+  const flipped = innerWrap.classList.toggle('flipped');
+  if(flipped){
+    // increment review stat for today
+    const key = todayKey();
+    state.flashReviewedByDay[key] = (state.flashReviewedByDay[key]||0) + 1;
+    saveStudyData();
+    updateProductivityUI();
+  }
+}
+flashList.addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('button');
+  if(!btn) return;
+  const action = btn.dataset.action;
+  const wrap = btn.closest('.flip-card');
+  if(!wrap) return;
+  const id = Number(wrap.dataset.id);
+  if(action==='flip'){ toggleCardFlip(wrap); return; }
+  if(action==='del'){
+    if(!confirm('Delete this flashcard?')) return;
+    state.flashcards = state.flashcards.filter(f=> f.id!==id);
+    saveFlashcards(); renderFlashcards(); updateProductivityUI();
+  }
+});
+addFlashBtn.addEventListener('click', ()=>{
+  const q = (flashQ.value||'').trim(), a=(flashA.value||'').trim();
+  if(!q||!a){ alert('Enter both question and answer'); return; }
+  state.flashcards.unshift({ id:Date.now(), question:q, answer:a, createdAt:new Date().toISOString() });
+  flashQ.value=''; flashA.value=''; saveFlashcards(); renderFlashcards(); updateProductivityUI();
+});
+function loadFlashcards(){ state.flashcards = store.get('studyholic_flashcards', state.flashcards || []); renderFlashcards(); }
+
+/* -------------------------
+   Calendar (date picker + tasks)
+   ------------------------- */
+const calDate = document.getElementById('calDate');
+const addCalTaskBtn = document.getElementById('addCalTaskBtn');
+const calTaskInput = document.getElementById('calTaskInput');
+const calTasksList = document.getElementById('calTasksList');
+const selectedDateLabel = document.getElementById('selectedDateLabel');
+
+function renderCalendarTasksFor(dateKey){
+  selectedDateLabel.textContent = dateKey || '—';
+  calTasksList.innerHTML='';
+  const list = state.calendar[dateKey]||[];
+  if(list.length===0){ calTasksList.innerHTML = '<div style="color:var(--muted)">No tasks for this date</div>'; return; }
+  list.forEach(item=>{
+    const d = document.createElement('div');
+    d.style.display='flex'; d.style.gap='8px'; d.style.alignItems='center'; d.style.padding='6px'; d.style.borderRadius='8px';
+    d.style.background = item.done? '#ecfdf5':'#fff';
+    d.innerHTML = `<div style="flex:1">${escapeHtml(item.text)}</div>
+      <button class="btn btn-ghost" data-id="${item.id}" data-action="toggle">Done</button>
+      <button class="btn btn-ghost" data-id="${item.id}" data-action="del">Del</button>`;
+    calTasksList.appendChild(d);
+  });
+}
+calDate.addEventListener('change', ()=>{
+  const key = calDate.value || todayKey();
+  renderCalendarTasksFor(key);
+});
+addCalTaskBtn.addEventListener('click', ()=>{
+  const dateKey = calDate.value || todayKey();
+  const text = (calTaskInput.value||'').trim();
+  if(!text) return alert('Enter a task');
+  state.calendar[dateKey] = state.calendar[dateKey] || [];
+  state.calendar[dateKey].push({ id:Date.now(), text, done:false });
+  store.set('studyholic_calendar', state.calendar);
+  calTaskInput.value=''; renderCalendarTasksFor(dateKey); updateProductivityUI();
+});
+calTasksList.addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('button');
+  if(!btn) return;
+  const id = Number(btn.dataset.id), action = btn.dataset.action;
+  const dateKey = calDate.value || todayKey();
+  if(!state.calendar[dateKey]) return;
+  if(action==='toggle'){
+    state.calendar[dateKey] = state.calendar[dateKey].map(it=> it.id===id? {...it, done:!it.done}: it);
+    store.set('studyholic_calendar', state.calendar);
+    renderCalendarTasksFor(dateKey); updateProductivityUI();
+  } else if(action==='del'){
+    if(!confirm('Delete?')) return;
+    state.calendar[dateKey] = state.calendar[dateKey].filter(it=> it.id!==id);
+    store.set('studyholic_calendar', state.calendar);
+    renderCalendarTasksFor(dateKey); updateProductivityUI();
+  }
+});
+
+/* -------------------------
+   Productivity UI & helpers
+   ------------------------- */
+function updateProductivityUI(){
+  const today = todayKey();
+  const secs = state.totalStudyByDay[today]||0;
+  const mins = Math.floor(secs/60);
+  document.getElementById('studyTimeStat').textContent = mins? `${mins}m` : `${secs}s`;
+  // tasks completed today: count tasks created today and completed? Simpler: completed field among regular tasks and calendar tasks for today
+  const tasksDone = state.tasks.filter(t=> t.completed).length + ( (state.calendar[today]||[]).filter(t=> t.done).length );
+  document.getElementById('tasksDoneStat').textContent = tasksDone;
+  const flashRev = state.flashReviewedByDay[today] || 0;
+  document.getElementById('flashReviewedStat').textContent = flashRev;
+}
+
+/* -------------------------
+   AI canned responses (offline)
+   ------------------------- */
+const aiInput = document.getElementById('aiInput'), aiAskBtn = document.getElementById('aiAskBtn'), aiAnswer = document.getElementById('aiAnswer');
+const canned = {
+  focus: "Try Pomodoro: 25 min focus + 5 min break. Remove notifications and set a clear goal.",
+  motivation: "Break big tasks into small wins. Celebrate progress — even tiny steps matter.",
+  tips: "Active recall, spaced repetition, test yourself, teach others and take short breaks.",
+  default: "I can help with focus, motivation and study tips. Try keywords: focus, motivation, tips"
+};
+function askAIQuery(q){
+  const k = q.toLowerCase();
+  let ans = canned.default;
+  if(k.includes('focus')) ans = canned.focus;
+  else if(k.includes('motivation')) ans = canned.motivation || canned.motivation;
+  else if(k.includes('tip') || k.includes('study')) ans = canned.tips;
+  aiAnswer.textContent = ans;
+}
+aiAskBtn.addEventListener('click', ()=>{ askAIQuery(aiInput.value||''); aiInput.value=''; });
+aiInput.addEventListener('keypress', (e)=>{ if(e.key==='Enter'){ askAIQuery(aiInput.value||''); aiInput.value=''; } });
+
+/* -------------------------
+   Utilities & init
+   ------------------------- */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function init(){
+  // load persisted state pieces
+  state.tasks = store.get('studyholic_tasks', state.tasks || []);
+  state.notes = store.get('studyholic_notes', state.notes || '');
+  state.flashcards = store.get('studyholic_flashcards', state.flashcards || []);
+  state.totalStudyByDay = store.get('studyholic_totalStudyByDay', state.totalStudyByDay || state.totalStudyByDay);
+  state.flashReviewedByDay = store.get('studyholic_flashReviewedByDay', state.flashReviewedByDay || {});
+  state.calendar = store.get('studyholic_calendar', state.calendar || {});
+  // default timer set from inputs
+  state.timerSeconds = loadTimerFromInputs() || 25*60;
+  setTimerVisual(state.timerSeconds);
+  // render things
+  renderTasks(); loadNotes(); renderFlashcards(); updateProductivityUI();
+  // if date input empty, set to today
+  if(!calDate.value) calDate.value = todayKey();
+  renderCalendarTasksFor(calDate.value);
+  // attach top-level handlers
+  startBtn.addEventListener('click', startTimer);
+  pauseBtn.addEventListener('click', pauseTimer);
+  resetBtn.addEventListener('click', resetTimer);
+  // bind reset input changes to update timerSeconds when not running
+  [hoursInput, minutesInput, secondsInput].forEach(inp => inp.addEventListener('change', ()=>{
+    if(!state.isRunning){
+      state.timerSeconds = loadTimerFromInputs() || 0;
+      setTimerVisual(state.timerSeconds);
+    }
+  }));
+  // notes auto-load status
+  updateNotesStatus();
+  // update stats every 5 seconds (keeps UI in sync)
+  setInterval(updateProductivityUI, 5000);
+}
+init();
+</script>
+</body>
+</html>
